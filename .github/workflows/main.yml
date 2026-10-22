@@ -1,0 +1,24 @@
+    - name: Build app
+      run: |
+        PROJ_PATH=$(find . -maxdepth 3 -name "*.xcodeproj" | head -n 1)
+        if [ -z "$PROJ_PATH" ]; then
+          echo "Không tìm thấy file .xcodeproj!"
+          exit 1
+        fi
+        echo "Tìm thấy project tại: $PROJ_PATH"
+        
+        # Tự động tìm Scheme đầu tiên có trong project
+        SCHEME_NAME=$(xcodebuild -project "$PROJ_PATH" -list | grep -A 20 "Schemes:" | grep -v "Schemes:" | head -n 1 | xargs)
+        if [ -z "$SCHEME_NAME" ]; then
+          SCHEME_NAME=$(basename "$PROJ_PATH" .xcodeproj)
+        fi
+        echo "Đang sử dụng Scheme: $SCHEME_NAME"
+
+        xcodebuild -project "$PROJ_PATH" \
+                   -scheme "$SCHEME_NAME" \
+                   -configuration Release \
+                   -derivedDataPath build \
+                   -sdk iphoneos \
+                   CODE_SIGN_IDENTITY="" \
+                   CODE_SIGNING_REQUIRED=NO \
+                   CODE_SIGNING_ALLOWED=NO
