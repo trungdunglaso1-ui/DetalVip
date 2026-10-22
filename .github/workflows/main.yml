@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build and Create IPA
-    runs-on: macos-latest
+    runs-on: macos-13
 
     steps:
     - name: Checkout code
@@ -28,8 +28,16 @@ jobs:
           exit 1
         fi
         echo "Tìm thấy project tại: $PROJ_PATH"
+        
+        # Tự động quét lấy tên Scheme chuẩn trong project
+        SCHEME_NAME=$(xcodebuild -project "$PROJ_PATH" -list | grep -A 10 "Schemes:" | tail -n +2 | head -n 1 | xargs)
+        if [ -z "$SCHEME_NAME" ]; then
+          SCHEME_NAME=$(basename "$PROJ_PATH" .xcodeproj)
+        fi
+        echo "Đang sử dụng Scheme: $SCHEME_NAME"
+
         xcodebuild -project "$PROJ_PATH" \
-                   -scheme ThreeOneOSFive \
+                   -scheme "$SCHEME_NAME" \
                    -configuration Release \
                    -derivedDataPath build \
                    -sdk iphoneos \
