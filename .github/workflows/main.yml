@@ -1,3 +1,25 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and Create IPA
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Unzip source code
+      run: |
+        if [ -f "3105-main.zip" ]; then
+          unzip -o 3105-main.zip
+        fi
+
     - name: Build app
       run: |
         PROJ_PATH=$(find . -maxdepth 3 -name "*.xcodeproj" | head -n 1)
@@ -6,19 +28,28 @@
           exit 1
         fi
         echo "Tìm thấy project tại: $PROJ_PATH"
-        
-        # Tự động tìm Scheme đầu tiên có trong project
-        SCHEME_NAME=$(xcodebuild -project "$PROJ_PATH" -list | grep -A 20 "Schemes:" | grep -v "Schemes:" | head -n 1 | xargs)
-        if [ -z "$SCHEME_NAME" ]; then
-          SCHEME_NAME=$(basename "$PROJ_PATH" .xcodeproj)
-        fi
-        echo "Đang sử dụng Scheme: $SCHEME_NAME"
-
         xcodebuild -project "$PROJ_PATH" \
-                   -scheme "$SCHEME_NAME" \
+                   -scheme ThreeOneOSFive \
                    -configuration Release \
                    -derivedDataPath build \
                    -sdk iphoneos \
                    CODE_SIGN_IDENTITY="" \
                    CODE_SIGNING_REQUIRED=NO \
                    CODE_SIGNING_ALLOWED=NO
+
+    - name: Package to IPA
+      run: |
+        APP_PATH=$(find build/Build/Products/Release-iphoneos -maxdepth 2 -name "*.app" | head -n 1)
+        if [ -z "$APP_PATH" ]; then
+          echo "Không tìm thấy file .app!"
+          exit 1
+        fi
+        mkdir -p Payload
+        cp -R "$APP_PATH" Payload/
+        zip -r ThreeOneOSFive.ipa Payload
+
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ThreeOneOSFive-IPA
+        path: ThreeOneOSFive.ipa
